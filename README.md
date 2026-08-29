@@ -1,0 +1,146 @@
+# System Call Monitor
+
+## Team Members
+
+| 2520030499 | Implemented file operations using `open()`, `read()`, `write()`, and `close()`, along with system-call return-value checking and error handling using `errno`. |
+| 2520030557 | Implemented process management using `fork()`, `exec()`, and `wait()`/`waitpid()`, and performed system-call tracing using `strace`. |
+
+## Supervisor
+
+**< Harika Ma'am > **
+
+---
+
+## Abstract
+
+The **System Call Monitor** is a Linux-based C programming project developed to provide a practical understanding of how user-space applications communicate with the operating system kernel through system calls. The system demonstrates essential file and process management operations using system calls such as `open()`, `read()`, `write()`, `close()`, `fork()`, `exec()`, and `wait()`/`waitpid()`.
+
+The project creates and manipulates files, creates and manages processes, executes external programs, and synchronizes parent and child processes. It also implements proper system-call return-value checking and uses `errno` to identify and handle runtime errors. The `strace` utility is used to trace and monitor the system calls generated during program execution, allowing users to observe the sequence of interactions between an application and the Linux kernel.
+
+By combining implementation with system-call tracing and monitoring, the project provides a hands-on demonstration of user-space to kernel-space interaction, process management, file operations, error handling, and operating-system services.
+
+---
+
+## Problem Statement
+
+Understanding how applications interact with an operating system is a fundamental concept in systems programming and operating systems. Applications cannot directly access most system resources; instead, they communicate with the Linux kernel through system calls to perform operations such as creating and accessing files, managing processes, executing programs, and synchronizing tasks.
+
+However, students often learn these concepts primarily through theory, making it difficult to visualize what happens between a user-space application and the kernel. The sequence of system calls, their return values, error conditions, and the transition from user space to kernel space are not always easy to observe during normal program execution.
+
+To address this gap, there is a need for a practical system that demonstrates commonly used Linux system calls and allows their execution to be monitored. The proposed **System Call Monitor** provides a C-based environment for performing file operations using `open()`, `read()`, `write()`, and `close()`, along with process management using `fork()`, `exec()`, and `wait()`/`waitpid()`. The system also incorporates return-value validation and `errno` for proper error handling.
+
+Furthermore, the project uses **`strace`** to trace the system calls generated during execution, enabling users to examine how applications request services from the Linux kernel. This provides a practical understanding of system-call execution, process creation and synchronization, file management, error handling, and the interaction between user-space programs and kernel services.
+
+---
+
+## Objectives
+
+The main objectives of the **System Call Monitor** are:
+
+- To understand the role and purpose of Linux system calls.
+- To demonstrate file operations using `open()`, `read()`, `write()`, and `close()`.
+- To understand process creation using `fork()`.
+- To demonstrate execution of external programs using `exec()`.
+- To implement process synchronization using `wait()` or `waitpid()`.
+- To practice checking and handling system-call return values.
+- To understand Linux error handling using `errno`.
+- To use `strace` for tracing and monitoring system calls.
+- To observe the relationship between user-space applications and kernel services.
+- To provide practical understanding of file management, process management, and process synchronization in Linux.
+
+---
+
+## Operating Systems Concepts / Linux APIs Used
+
+| OS Concept / Linux API / System Call | Purpose in the Project |
+|---|---|
+| **File Management – `open()`, `read()`, `write()`, `close()`** | Creates, opens, reads, writes, and closes files to demonstrate basic file operations through system calls. |
+| **Process Creation – `fork()`** | Creates a child process from the parent process and demonstrates parent-child process relationships. |
+| **Program Execution – `exec()`** | Replaces the child process with another executable program. |
+| **Process Identification – `getpid()`, `getppid()`** | Retrieves the Process ID and Parent Process ID to identify processes. |
+| **Process Synchronization – `wait()`, `waitpid()`** | Allows the parent process to wait for child processes to complete. |
+| **Error Handling – `errno`** | Identifies and reports errors that occur during system-call execution. |
+| **System Call Tracing – `strace`** | Traces system calls generated by the program and helps analyze interactions with the Linux kernel. |
+| **User Space / Kernel Space** | Demonstrates how applications request operating-system services through system calls. |
+
+---
+
+## Proposed Methodology
+
+The project is implemented in **C on a Linux operating system** and consists of multiple modules demonstrating different system calls.
+
+### 1. File Operations
+
+The program uses `open()` to create or access files and uses `read()` and `write()` to perform file operations. The file descriptor is released using `close()`.
+
+### 2. Process Creation
+
+The `fork()` system call is used to create a child process. Process information such as PID and PPID can be displayed to demonstrate the relationship between the parent and child processes.
+
+### 3. Program Execution
+
+The child process uses an `exec()` family function to execute another program. This demonstrates how a process can replace its existing program with a new executable.
+
+### 4. Process Synchronization
+
+The parent process uses `wait()` or `waitpid()` to wait for the child process to finish. This demonstrates synchronization between parent and child processes.
+
+### 5. Error Handling
+
+The return value of each system call is checked to determine whether the operation was successful. When an error occurs, `errno` is used to identify the cause of the failure.
+
+### 6. System Call Monitoring
+
+The program is executed using `strace` to trace the system calls generated during execution. The output is analyzed to identify file operations, process-related calls, and other kernel interactions.
+
+### 7. User-Space and Kernel-Space Interaction
+
+The observed system calls are analyzed to understand how a user-space application requests services from the Linux kernel.
+
+---
+
+## Tools / Platforms / Software Used
+
+| Tool / Platform / Software | Purpose |
+|---|---|
+| **C Programming Language** | Development of the system-call demonstration program. |
+| **Linux Operating System** | Environment for executing and testing Linux system calls. |
+| **GCC** | Compiles the C source code into executable programs. |
+| **Linux System Calls / APIs** | Provides file and process management functionality. |
+| **`strace`** | Traces and monitors system calls generated by the program. |
+| **Linux Terminal / Shell** | Used to compile, execute, and monitor the program. |
+| **Git & GitHub** | Used for version control, collaboration, and project management. |
+
+---
+
+## Expected Outcome
+
+The project is expected to provide a functional C-based Linux system that demonstrates the practical use of system calls for file and process management. The program should successfully perform file operations using `open()`, `read()`, `write()`, and `close()`, create and manage processes using `fork()`, execute programs using `exec()`, and synchronize processes using `wait()` or `waitpid()`.
+
+The system should also detect and handle system-call errors using return values and `errno`. Using `strace`, the generated system calls should be traced and analyzed to demonstrate the interaction between the user-space application and Linux kernel services.
+
+The project will provide students with practical knowledge of system calls, file management, process creation, process synchronization, error handling, and user-space to kernel-space interaction.
+
+---
+
+## Project Structure
+
+```text
+SystemCallMonitor/
+│
+├── src/
+│   └── Source code files
+│
+├── docs/
+│   └── Project documentation
+│
+├── data/
+│   └── README.md
+│
+├── results/
+│   └── System call trace outputs and results
+│
+├── reports/
+│   └── Project reports
+│
+└── README.md
