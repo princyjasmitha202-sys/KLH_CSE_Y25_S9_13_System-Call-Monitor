@@ -1,0 +1,433 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <signal.h>
+#include <pthread.h>
+
+#define DEMO_FILE "system_call_sample.txt"
+#define BUFFER_SIZE 256
+
+volatile sig_atomic_t signal_received = 0;
+
+pthread_mutex_t counter_mutex = PTHREAD_MUTEX_INITIALIZER;
+int shared_counter = 0;
+
+/* Display system call errors */
+void print_error(const char *operation)
+{
+    fprintf(stderr, "%s failed: %s\n", operation, strerror(err>
+}
+
+/* 1. File Input and Output */
+void demo_file_io(void)
+{
+    char message[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE] = {0};
+
+    printf("\n========== FILE I/O ==========\n");
+
+    printf("Enter the text you want to write: ");
+
+    if (fgets(message, sizeof(message), stdin) == NULL) {
+        printf("Input error.\n");
+        return;
+    }
+
+    int fd = open(DEMO_FILE, O_CREAT | O_WRONLY | O_TRUNC, 064>
+
+    if (fd == -1) {
+        print_error("open");
+        return;
+    }
+
+    size_t length = strlen(message);
+    size_t total_written = 0;
+
+    while (total_written < length) {
+        ssize_t written = write(fd, message + total_written,
+                                length - total_written);
+
+        if (written == -1) {
+            print_error("write");
+            close(fd);
+            return;
+        }
+
+        total_written += (size_t)written;
+    }
+ printf("\n[File I/O] Text written successfully using write>
+    printf("[File I/O] Bytes written: %zu\n", total_written);
+
+    if (close(fd) == -1) {
+        print_error("close");
+        return;
+    }
+
+    fd = open(DEMO_FILE, O_RDONLY);
+
+    if (fd == -1) {
+        print_error("open for reading");
+        return;
+    }
+
+    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+
+    if (bytes_read == -1) {
+        print_error("read");
+        close(fd);
+        return;
+    }
+
+    buffer[bytes_read] = '\0';
+
+    printf("[File I/O] Reading saved text:\n");
+    printf("%s", buffer);
+
+    close(fd);
+
+    printf("[File I/O] File closed successfully.\n");
+}
+
+/* 2. Process Management */
+void demo_process_management(void)
+{
+    printf("\n========== PROCESS MANAGEMENT ==========\n");
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        print_error("fork");
+        return;
+    }
+
+    if (pid == 0) {
+        printf("[Process] Child process created.\n");
+        printf("[Process] Child PID: %d\n", getpid());
+        printf("[Process] Parent PID: %d\n", getppid());
+
+        printf("[Process] Executing ls command using exec().\n>
+
+        execlp("ls", "ls", "-l", DEMO_FILE, (char *)NULL);
+
+        print_error("execlp");
+        _exit(EXIT_FAILURE);
+    } else {
+        int status;
+
+        printf("[Process] Parent process PID: %d\n", getpid());
+        printf("[Process] Waiting for child process.\n");
+
+        if (waitpid(pid, &status, 0) == -1) {
+            print_error("waitpid");
+            return;
+ }
+
+        printf("[Process] Child process completed.\n");
+    }
+}
+
+/* 3. Inter-Process Communication using Pipe */
+void demo_ipc(void)
+{
+    int pipefd[2];
+    char buffer[BUFFER_SIZE] = {0};
+
+    printf("\n========== INTER-PROCESS COMMUNICATION =========>
+
+    if (pipe(pipefd) == -1) {
+        print_error("pipe");
+        return;
+    }
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        print_error("fork");
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return;
+    }
+
+    if (pid == 0) {
+        close(pipefd[1]);
+   ssize_t n = read(pipefd[0], buffer, sizeof(buffer) - 1>
+
+        if (n == -1) {
+            print_error("pipe read");
+        } else {
+            buffer[n] = '\0';
+            printf("[IPC] Child received message: %s\n", buffe>
+        }
+
+        close(pipefd[0]);
+        _exit(EXIT_SUCCESS);
+    } else {
+        const char *message =
+            "Message sent from parent to child through a pipe.>
+
+        close(pipefd[0]);
+
+        if (write(pipefd[1], message, strlen(message)) == -1) {
+            print_error("pipe write");
+        } else {
+            printf("[IPC] Parent sent message through pipe.\n">
+        }
+
+        close(pipefd[1]);
+        waitpid(pid, NULL, 0);
+    }
+}
+
+/* 4. Signal Handling */
+void signal_handler(int signum)
+{
+    if (signum == SIGUSR1) {
+  signal_received = 1;
+    }
+}
+
+void demo_signals(void)
+{
+    struct sigaction sa;
+
+    printf("\n========== SIGNAL HANDLING ==========\n");
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        print_error("sigaction");
+        return;
+    }
+
+    printf("[Signal] Sending SIGUSR1 signal.\n");
+
+    if (raise(SIGUSR1) != 0) {
+        print_error("raise");
+        return;
+    }
+
+    if (signal_received) {
+        printf("[Signal] SIGUSR1 received and handled successf>
+    }
+}
+/* 5. Memory Management */
+void demo_memory_management(void)
+{
+    size_t size = 4096;
+
+    printf("\n========== MEMORY MANAGEMENT ==========\n");
+
+    char *memory = mmap(NULL, size,
+                        PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS,
+                        -1, 0);
+
+    if (memory == MAP_FAILED) {
+        print_error("mmap");
+        return;
+    }
+
+    snprintf(memory, size,
+             "Memory allocated using mmap() system call.");
+
+    printf("[Memory] Memory allocated successfully.\n");
+    printf("[Memory] Stored data: %s\n", memory);
+
+    if (munmap(memory, size) == -1) {
+        print_error("munmap");
+        return;
+    }
+
+    printf("[Memory] Memory released using munmap().\n");
+}
+
+/* 6. File System Information */
+void demo_filesystem(void)
+{
+    struct stat file_info;
+
+    printf("\n========== FILE SYSTEM INFORMATION ==========\n">
+
+    if (access(DEMO_FILE, F_OK) == 0) {
+        printf("[File System] File exists: %s\n", DEMO_FILE);
+    } else {
+        print_error("access");
+        return;
+    }
+
+    if (stat(DEMO_FILE, &file_info) == -1) {
+        print_error("stat");
+        return;
+    }
+
+    printf("[File System] File size: %ld bytes\n",
+           (long)file_info.st_size);
+
+    printf("[File System] Inode number: %ld\n",
+           (long)file_info.st_ino);
+
+    printf("[File System] File permissions: %o\n",
+           (unsigned int)(file_info.st_mode & 0777));
+
+    printf("[File System] Owner user ID: %ld\n",
+           (long)file_info.st_uid);
+}
+/* 7. Thread Synchronization */
+void *thread_function(void *arg)
+{
+    int i;
+
+    (void)arg;
+
+    for (i = 0; i < 10000; i++) {
+        pthread_mutex_lock(&counter_mutex);
+        shared_counter++;
+        pthread_mutex_unlock(&counter_mutex);
+    }
+
+    return NULL;
+}
+
+void demo_concurrency(void)
+{
+    pthread_t thread1, thread2;
+
+    printf("\n========== THREAD CONCURRENCY ==========\n");
+
+    shared_counter = 0;
+
+    if (pthread_create(&thread1, NULL, thread_function, NULL) >
+        fprintf(stderr, "Thread 1 creation failed.\n");
+        return;
+    }
+
+    if (pthread_create(&thread2, NULL, thread_function, NULL) >
+        fprintf(stderr, "Thread 2 creation failed.\n");
+        pthread_join(thread1, NULL);
+ return;
+    }
+
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+
+    printf("[Thread] Two threads executed successfully.\n");
+    printf("[Thread] Final shared counter: %d\n", shared_count>
+    printf("[Thread] Mutex synchronization completed.\n");
+}
+
+/* 8. Execute All Demonstrations */
+void run_all_demonstrations(void)
+{
+    printf("\n\n========================================\n");
+    printf("     RUNNING ALL DEMONSTRATIONS\n");
+    printf("========================================\n");
+
+    demo_file_io();
+    demo_process_management();
+    demo_ipc();
+    demo_signals();
+    demo_memory_management();
+    demo_filesystem();
+    demo_concurrency();
+
+    printf("\n========================================\n");
+    printf("     ALL DEMONSTRATIONS COMPLETED\n");
+    printf("========================================\n");
+}
+/* Main Menu */
+int main(void)
+{
+    int choice;
+    char input[32];
+
+    while (1) {
+        printf("\n");
+        printf("============================================\n>
+        printf("     SYSTEM CALL DEMONSTRATION SYSTEM\n");
+        printf("============================================\n>
+
+        printf("1. File Input and Output\n");
+        printf("2. Process Management\n");
+        printf("3. Inter-Process Communication\n");
+        printf("4. Signal Handling\n");
+        printf("5. Memory Management\n");
+        printf("6. File System Information\n");
+        printf("7. Thread Concurrency\n");
+        printf("8. Run All Demonstrations\n");
+        printf("0. Exit\n");
+
+        printf("--------------------------------------------\n>
+        printf("Enter your choice: ");
+
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            break;
+        }
+
+        char *end;
+        errno = 0;
+        long selected = strtol(input, &end, 10);
+  while (*end == ' ' || *end == '\t' ||
+               *end == '\n' || *end == '\r') {
+            end++;
+        }
+
+        if (errno != 0 || end == input || *end != '\0' ||
+            selected < 0 || selected > 8) {
+            printf("Invalid choice. Please enter 0 to 8.\n");
+            continue;
+        }
+
+        choice = (int)selected;
+
+        switch (choice) {
+            case 1:
+                demo_file_io();
+                break;
+
+            case 2:
+                demo_process_management();
+                break;
+
+            case 3:
+                demo_ipc();
+                break;
+
+            case 4:
+                demo_signals();
+                break;
+
+            case 5:
+                demo_memory_management();
+                   break;
+
+            case 6:
+                demo_filesystem();
+                break;
+
+            case 7:
+                demo_concurrency();
+                break;
+
+            case 8:
+                run_all_demonstrations();
+                break;
+
+            case 0:
+                pthread_mutex_destroy(&counter_mutex);
+                printf("\nExiting System Call Demonstration Sy>
+                return 0;
+        }
+    }
+
+    pthread_mutex_destroy(&counter_mutex);
+    return 0;
+}
